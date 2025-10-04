@@ -1,0 +1,50 @@
+# Enhanced cmake completion with project intellisense
+
+_cmake_intellisense() {
+  local curcontext="$curcontext" state line
+  typeset -A opt_args
+
+  _arguments -C \
+    '(-b --build)'{-b,--build}'[build project]:build-dir:_directories' \
+    '(-S --source)'{-S,--source}'[source directory]:source-dir:_directories' \
+    '--preset[preset name]:preset:_cmake_intellisense__presets' \
+    '--install[install the project]' \
+    '(* --target)'{--target,-t}'[build target]:target:_cmake_intellisense__targets' \
+    '*:: :->args'
+
+  case $state in
+    args)
+      _cmake
+      ;;
+  esac
+}
+
+_cmake_intellisense__targets() {
+  local builddir
+  builddir=$(_cmake_intellisense__find_build_dir)
+  if [[ -z "$builddir" ]]; then
+    return 1
+  fi
+  local -a targets
+  targets=($(_cmake_intellisense__load_targets "$builddir"))
+  compadd -a targets
+}
+
+_cmake_intellisense__presets() {
+  local presetfile="CMakePresets.json"
+  [[ -f "$presetfile" ]] || return 1
+  local -a presets
+  presets=($(jq -r '.presets[].name' "$presetfile" 2>/dev/null))
+  compadd -a presets
+}
+
+_cmake_intellisense__find_build_dir() {
+  for dir in build out cmake-build-debug cmake-build-release; do
+    if [[ -d "$dir/.cmake/api/v1/reply" ]]; then
+      echo "$dir"
+      return 0
+    fi
+  done
+  return 1
+}
+
