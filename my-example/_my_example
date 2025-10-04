@@ -1,0 +1,4 @@
+#compdef my-example
+
+_arguments \
+  '1: :((Alice Bob Carol Dave Eve))'

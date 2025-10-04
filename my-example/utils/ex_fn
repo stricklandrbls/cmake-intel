@@ -1,0 +1,5 @@
+# ex_fn
+ex_fn() {
+  local name=${1:-$USER}
+  echo "Hello, $name"
+}

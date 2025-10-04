@@ -1,51 +1,70 @@
 #compdef cmake
-# Enhanced cmake completion with project intellisense
 
-_cmake_intellisense() {
+# --- Initialization & helper sourcing ---
+local _cmake_intel_dir
+for d in $fpath; do
+  if [[ -f "$d/_cmake_intel" ]]; then
+    _cmake_intel_dir="$d"
+    break
+  fi
+done
+
+if [[ -n "$_cmake_intel_dir" && -f "$_cmake_intel_dir/utils/parse_targets.zsh" ]]; then
+  source "$_cmake_intel_dir/utils/parse_targets.zsh"
+  print -u2 "[cmake-intel] Loaded parse_targets.zsh from $_cmake_intel_dir"
+else
+  print -u2 "[cmake-intel] WARNING: could not find utils/parse_targets.zsh"
+fi
+
+# --- Completion entry point ---
+_cmake_intel() {
+  echo "[cmake-intel] _cmake_intel invoked (words: $words)" >&2
   local curcontext="$curcontext" state line
   typeset -A opt_args
 
-  _arguments -C \
-    '(-b --build)'{-b,--build}'[build project]:build-dir:_directories' \
-    '(-S --source)'{-S,--source}'[source directory]:source-dir:_directories' \
-    '--preset[preset name]:preset:_cmake_intellisense__presets' \
-    '--install[install the project]' \
-    '(* --target)'{--target,-t}'[build target]:target:_cmake_intellisense__targets' \
-    '*:: :->args'
+  _arguments \
+    '--build=[build directory]:build-dir:_directories' \
+    '--preset=[build preset]:preset:_cmake_intel__presets' \
+    '--target=[build target]:target:_cmake_intel__targets' \
+    '*::arg:->args'
 
   case $state in
     args)
-      _cmake
+      _files
       ;;
   esac
 }
 
-_cmake_intellisense__targets() {
-  local builddir
-  builddir=$(_cmake_intellisense__find_build_dir)
-  if [[ -z "$builddir" ]]; then
-    return 1
-  fi
-  local -a targets
-  targets=($(_cmake_intellisense__load_targets "$builddir"))
-  compadd -a targets
-}
+# --- Helpers ---
 
-_cmake_intellisense__presets() {
-  local presetfile="CMakePresets.json"
-  [[ -f "$presetfile" ]] || return 1
-  local -a presets
-  presets=($(jq -r '.presets[].name' "$presetfile" 2>/dev/null))
-  compadd -a presets
-}
-
-_cmake_intellisense__find_build_dir() {
+_cmake_intel__find_build_dir() {
   for dir in build out cmake-build-debug cmake-build-release; do
     if [[ -d "$dir/.cmake/api/v1/reply" ]]; then
       echo "$dir"
       return 0
     fi
   done
+  [[ -d build ]] && echo build && return 0
   return 1
 }
 
+_cmake_intel__targets() {
+  echo "[cmake-intel] _cmake_intel__targets called" >&2
+  local builddir
+  builddir=$(_cmake_intel__find_build_dir)
+  echo "[cmake-intel] builddir=$builddir" >&2
+  [[ -z "$builddir" ]] && return 1
+
+  local -a targets
+  targets=($(_cmake_intel__load_targets "$builddir"))
+  echo "[cmake-intel] targets=${targets[*]}" >&2
+
+  (( ${#targets[@]} )) && compadd -a targets
+}
+
+_cmake_intel__presets() {
+  local presetfile="CMakePresets.json"
+  [[ -f "$presetfile" ]] || return 1
+  grep -oE '"name"\s*:\s*"[^"]+"' "$presetfile" | \
+    sed -E 's/.*"name"\s*:\s*"([^"]+)".*/\1/' | sort -u
+}
