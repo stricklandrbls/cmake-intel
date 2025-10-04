@@ -1,7 +1,7 @@
 # Extract target names from CMake File API reply JSON
 # Requires jq for now (lightweight, but can be replaced later with pure zsh JSON parser)
 
-_cmake_intellisense__load_targets() {
+_cmake_intel__load_targets() {
   local builddir="$1"
   local reply_dir="${builddir}/.cmake/api/v1/reply"
 

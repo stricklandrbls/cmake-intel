@@ -1,3 +1,4 @@
+#compdef cmake
 # Enhanced cmake completion with project intellisense
 
 _cmake_intellisense() {
